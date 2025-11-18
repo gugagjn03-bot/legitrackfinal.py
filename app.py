@@ -51,16 +51,34 @@ if btn_buscar:
                 tipo,
                 itens
             )
-            df = df_proposicoes(dados)
+            df_api = df_proposicoes(dados)
+            total_api = len(df_api)
+
+            if total_api == 0:
+                st.info("Nenhuma proposição retornada pela API para esse tipo/ano.")
+                st.stop()
 
             # 2) Filtro pelo termo na coluna 'ementa' (lado do Python)
             termo_busca = termo.strip()
+            df_filtrado = df_api
             if termo_busca:
-                df = df[df["ementa"].str.contains(termo_busca, case=False, na=False)]
+                df_filtrado = df_api[df_api["ementa"].str.contains(termo_busca, case=False, na=False)]
 
-        if df.empty:
-            st.info("Nenhum resultado para os filtros selecionados (após filtrar pela palavra-chave na ementa).")
-            st.stop()
+        # 3) Se o filtro por termo zerar, avisa e volta a usar o DF original
+        if df_filtrado.empty:
+            st.warning(
+                f"Nenhum resultado com a palavra-chave “{termo_busca}” "
+                f"nos {total_api} projetos carregados. Mostrando todos os resultados sem esse filtro."
+            )
+            df = df_api.copy()
+        else:
+            df = df_filtrado.copy()
+
+        # Mostra um resumo no topo
+        st.caption(
+            f"Foram carregadas {total_api} proposições da API; "
+            f"{len(df)} exibidas após aplicação dos filtros."
+        )
 
         # Enriquecer com autor principal
         autores: List[str] = []
@@ -198,3 +216,4 @@ else:
 
 st.markdown("---")
 st.markdown("**Participantes do grupo:** Gustavo Jardim • Pedro Henrique Bastos • Sávio Verbicário")
+
