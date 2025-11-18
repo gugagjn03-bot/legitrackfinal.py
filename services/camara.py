@@ -11,36 +11,51 @@ class CamaraAPIError(RuntimeError):
     pass
 
 def _get(url: str, params: Optional[dict] = None, timeout: int = 25) -> dict:
+    """
+    Função interna para chamar a API da Câmara com tratamento básico de erro.
+    """
     try:
         r = requests.get(url, params=params, timeout=timeout)
         r.raise_for_status()
         return r.json()
     except requests.RequestException as e:
-        raise CamaraAPIError(f"Erro ao consultar {url}: {e}") from e
+        # Aqui a gente lança um erro mais amigável pro app pegar e exibir
+        raise CamaraAPIError(f"Erro ao consultar a API da Câmara ({url}): {e}") from e
 
-def buscar_proposicoes(termo: str,
-                       ano: Optional[int] = None,
-                       tipo: str = "PL",
-                       itens: int = 100,
-                       ordenar_por: str = "ano",
-                       ordem: str = "DESC") -> List[Dict[str, Any]]:
+def buscar_proposicoes(
+    termo: str,
+    ano: Optional[int] = None,
+    tipo: str = "PL",
+    itens: int = 100,
+    ordenar_por: str = "id",   # 👈 AQUI: agora ordena por 'id', que é aceito pela API
+    ordem: str = "DESC",
+) -> List[Dict[str, Any]]:
     """
     Busca proposições pela ementa (palavra-chave), filtrando por tipo e ano.
-    Params:
-      - termo: palavra-chave na ementa
-      - ano: (opcional) ano da proposição
-      - tipo: sigla do tipo (PL, PLP, PEC, etc.)
-      - itens: quantidade de itens por página (máx ~100)
+
+    Parâmetros enviados para a API:
+      - siglaTipo: PL, PLP, PEC, etc.
+      - ano: ano da proposição (opcional)
+      - ementa: termo de busca no texto da ementa
+      - ordem: ASC/DESC
+      - ordenarPor: id  (campo seguro suportado pela API)
+      - itens: quantidade de resultados
     """
-    params = {
-        "ementa": termo,
+    params: Dict[str, Any] = {
         "siglaTipo": tipo,
         "itens": itens,
         "ordem": ordem,
         "ordenarPor": ordenar_por,
     }
+
+    # só manda se tiver termo
+    if termo:
+        params["ementa"] = termo
+
+    # só manda se tiver ano
     if ano:
         params["ano"] = ano
+
     data = _get(f"{BASE}/proposicoes", params=params)
     return data.get("dados", [])
 
@@ -57,4 +72,3 @@ def autores_por_uri(uri_autores: str) -> List[Dict[str, Any]]:
         return []
     data = _get(uri_autores)
     return data.get("dados", [])
-
