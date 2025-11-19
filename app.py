@@ -233,7 +233,7 @@ if btn_buscar:
             st.markdown(f"[🔗 Página oficial]({row['link']})")
 
         with cB:
-        with st.spinner("Carregando tramitações..."):
+            with st.spinner("Carregando tramitações..."):
             tram = tramitacoes(int(row["id"]))
 
         if tram:
