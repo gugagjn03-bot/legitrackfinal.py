@@ -184,6 +184,9 @@ def extrair_autor_principal(autores_payload: List[Dict[str, Any]]) -> Dict[str, 
       - partido
       - uf
       - tipoAutor
+
+    OBS: a API da Câmara nem sempre usa os mesmos nomes de campo,
+    então aqui a gente tenta várias possibilidades para cada coisa.
     """
     if not autores_payload:
         return {"nome": None, "partido": None, "uf": None, "tipoAutor": None}
@@ -191,16 +194,42 @@ def extrair_autor_principal(autores_payload: List[Dict[str, Any]]) -> Dict[str, 
     # Prioriza autores do tipo "Deputado(a)"
     deputado = None
     for a in autores_payload:
-        tipo = a.get("tipo", "") or ""
-        if "Deputado" in tipo:
+        tipo = (a.get("tipo") or "").lower()
+        if "deputado" in tipo:
             deputado = a
             break
 
     autor = deputado or autores_payload[0]
 
+    # Nome (pode vir como "nome" ou "nomeAutor")
+    nome = (
+        autor.get("nome")
+        or autor.get("nomeAutor")
+        or autor.get("nomeAutorPrimeiroSignatario")
+    )
+
+    # Partido (várias possibilidades de chave)
+    partido = (
+        autor.get("siglaPartido")
+        or autor.get("siglaPartidoAutor")
+        or autor.get("sigla_partido")
+        or autor.get("partido")
+    )
+
+    # UF (a API usa muito "siglaUf", mas vamos cobrir outras variações)
+    uf = (
+        autor.get("siglaUf")
+        or autor.get("siglaUF")
+        or autor.get("uf")
+        or autor.get("ufAutor")
+        or autor.get("siglaUfAutor")
+    )
+
+    tipo_autor = autor.get("tipo")
+
     return {
-        "nome": autor.get("nome"),
-        "partido": autor.get("siglaPartido") or autor.get("siglaPartidoAutor"),
-        "uf": autor.get("uf") or autor.get("ufAutor"),
-        "tipoAutor": autor.get("tipo"),
+        "nome": nome,
+        "partido": partido,
+        "uf": uf,
+        "tipoAutor": tipo_autor,
     }
